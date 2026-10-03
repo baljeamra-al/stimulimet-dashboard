@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="sq" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistemi i Monitorimit të Stimulimeve (05.10 - 11.10)</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        navy: {
+                            800: '#0f172a',
+                            900: '#0b0f19',
+                            700: '#1e293b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-950 text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
+
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="bg-gradient-to-tr from-blue-600 to-emerald-500 p-2.5 rounded-xl shadow-lg shadow-blue-500/20">
+                        <i class="fa-solid fa-shield-halved text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-base sm:text-lg leading-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                            Sistemi i Stimulimeve
+                        </h1>
+                        <p class="text-xs text-slate-400 font-medium hidden sm:block">Periudha: 05.10 - 11.10 (<span id="agent-count-badge">9</span> Agjentë)</p>
+                    </div>
+                </div>
+
+                <!-- Access Mode Badge & Controls -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <!-- Mode Badge Indicator -->
+                    <div id="mode-badge" class="px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border bg-amber-500/10 text-amber-400 border-amber-500/30">
+                        <i class="fa-solid fa-eye"></i>
+                        <span id="mode-badge-text">Mënyra Agjent (Vetëm Lexim)</span>
+                    </div>
+
+                    <!-- Manage Agents Button (Manager Only) -->
+                    <button onclick="openAgentManagementModal()" id="btn-manage-agents" class="hidden px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-users-gear text-blue-400"></i>
+                        <span>Menaxho Agjentët</span>
+                    </button>
+
+                    <!-- Admin Auth Button -->
+                    <button onclick="toggleAdminAuth()" id="btn-admin-auth" class="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition shadow-md shadow-blue-600/20 flex items-center gap-1.5">
+                        <i class="fa-solid fa-lock" id="lock-icon"></i>
+                        <span id="lock-text">Hyr si Menaxher</span>
+                    </button>
+
+                    <!-- Manager Actions (CSV / Reset / Demo) - Visible only in Admin mode -->
+                    <div id="admin-tools" class="hidden flex items-center space-x-2 border-l border-slate-700 pl-2">
+                        <button onclick="loadDemoData()" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg transition border border-slate-700" title="Gjenero Të Dhëna Prova">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </button>
+                        <button onclick="exportToCSV()" class="p-2 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition" title="Eksporto në Excel/CSV">
+                            <i class="fa-solid fa-file-excel"></i>
+                        </button>
+                        <button onclick="resetData()" class="p-2 text-xs text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition" title="Fshi të gjitha të dhënat">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Quick Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-400">Totali i Stimulimeve (Javë)</span>
+                    <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg"><i class="fa-solid fa-euro-sign"></i></div>
+                </div>
+                <div class="mt-2 text-2xl font-bold text-white" id="stat-total-stimulim">0.00 €</div>
+                <p class="text-[11px] text-slate-500 mt-1">Shuma totale për të gjithë agjentët</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-400">Top Performuesi</span>
+                    <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><i class="fa-solid fa-crown"></i></div>
+                </div>
+                <div class="mt-2 text-xl font-bold text-white truncate" id="stat-top-agent">-</div>
+                <p class="text-[11px] text-slate-500 mt-1" id="stat-top-agent-amount">0.00 € stimulim i fituar</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-400">Totali i Kartelave</span>
+                    <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><i class="fa-solid fa-id-card"></i></div>
+                </div>
+                <div class="mt-2 text-2xl font-bold text-white" id="stat-total-cards">0</div>
+                <p class="text-[11px] text-slate-500 mt-1">Kartela të shitura gjithsej</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-400">Mesatarja Ditore</span>
+                    <div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg"><i class="fa-solid fa-chart-line"></i></div>
+                </div>
+                <div class="mt-2 text-2xl font-bold text-white" id="stat-avg-daily">0.00 €</div>
+                <p class="text-[11px] text-slate-500 mt-1">Për çdo ditë të javës</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-800 space-x-2 sm:space-x-8 overflow-x-auto">
+            <button onclick="switchTab('daily')" id="tab-btn-daily" class="tab-btn active border-b-2 border-blue-500 text-blue-400 pb-3 px-1 text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-regular fa-calendar-days"></i> Pasqyra Ditore
+            </button>
+            <button onclick="switchTab('summary')" id="tab-btn-summary" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 pb-3 px-1 text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-table"></i> Përmbledhja Javore (05-11.10)
+            </button>
+            <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 pb-3 px-1 text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-chart-column"></i> Analitika & Renditja
+            </button>
+            <button onclick="switchTab('rules')" id="tab-btn-rules" class="tab-btn border-b-2 border-transparent text-slate-400 hover:text-slate-200 pb-3 px-1 text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-circle-info"></i> Rregullat e Lojës
+            </button>
+        </div>
+
+        <section id="tab-content-daily" class="tab-content space-y-4">
+            <!-- Selector & Notice Bar -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-regular fa-calendar text-blue-400 text-lg"></i>
+                    <label for="date-selector" class="text-sm font-semibold text-slate-300">Zgjidh Datën:</label>
+                    <select id="date-selector" onchange="renderDailyTable()" class="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value="05.10">Datë 05.10.2026</option>
+                        <option value="06.10">Datë 06.10.2026</option>
+                        <option value="07.10">Datë 07.10.2026</option>
+                        <option value="08.10">Datë 08.10.2026</option>
+                        <option value="09.10">Datë 09.10.2026</option>
+                        <option value="10.10">Datë 10.10.2026</option>
+                        <option value="11.10">Datë 11.10.2026</option>
+                    </select>
+                </div>
+
+                <div id="read-only-notice" class="text-xs text-slate-400 bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-lock text-amber-400"></i>
+                    <span>Të dhënat shfaqen në mënyrë <strong>vetëm lexim</strong> për Agjentët.</span>
+                </div>
+            </div>
+
+            <!-- Daily Table -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-800/80 text-xs uppercase tracking-wider text-slate-400 font-semibold border-b border-slate-700">
+                            <tr>
+                                <th class="py-3.5 px-4">Agjenti</th>
+                                <th class="py-3.5 px-3">Çmimi Individual (€)</th>
+                                <th class="py-3.5 px-3">AR Individual (%)</th>
+                                <th class="py-3.5 px-3">Kartela të Shitura</th>
+                                <th class="py-3.5 px-3 bg-slate-800/40 text-emerald-400">Stim. Çmimi</th>
+                                <th class="py-3.5 px-3 bg-slate-800/40 text-blue-400">Stim. AR</th>
+                                <th class="py-3.5 px-3 bg-slate-800/40 text-amber-400">Stim. Kartela</th>
+                                <th class="py-3.5 px-4 bg-blue-900/30 text-white text-right">Totali Ditor (€)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daily-table-body" class="divide-y divide-slate-800/60 font-medium">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                        <tfoot class="bg-slate-800/90 text-white font-bold border-t-2 border-slate-700">
+                            <tr id="daily-table-footer">
+                                <!-- Dynamic Totals -->
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-content-summary" class="tab-content hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                <h2 class="text-base font-semibold text-white mb-1"><i class="fa-solid fa-table-cells text-blue-400 mr-2"></i>Përmbledhja e Fitimit të Stimulimeve (05.10 - 11.10)</h2>
+                <p class="text-xs text-slate-400">Tabela e plotë e stimulimeve të fituara për secilin agjent gjatë 7 ditëve (€)</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-800/80 text-xs uppercase tracking-wider text-slate-400 font-semibold border-b border-slate-700">
+                            <tr>
+                                <th class="py-3.5 px-4 sticky left-0 bg-slate-800 z-10">Agjenti</th>
+                                <th class="py-3.5 px-3 text-center">05.10</th>
+                                <th class="py-3.5 px-3 text-center">06.10</th>
+                                <th class="py-3.5 px-3 text-center">07.10</th>
+                                <th class="py-3.5 px-3 text-center">08.10</th>
+                                <th class="py-3.5 px-3 text-center">09.10</th>
+                                <th class="py-3.5 px-3 text-center">10.10</th>
+                                <th class="py-3.5 px-3 text-center">11.10</th>
+                                <th class="py-3.5 px-4 text-right bg-emerald-950/40 text-emerald-400 font-bold">Totali Javore (€)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summary-table-body" class="divide-y divide-slate-800/60 font-medium">
+                            <!-- Dynamic Matrix -->
+                        </tbody>
+                        <tfoot class="bg-slate-800/90 text-white font-bold border-t-2 border-slate-700">
+                            <tr id="summary-table-footer">
+                                <!-- Dynamic Totals -->
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-content-analytics" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                    <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-bar text-blue-400"></i> Totali i Stimulimit sipas Agjentëve (€)
+                    </h3>
+                    <div class="relative h-72">
+                        <canvas id="chart-agent-totals"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                    <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-ranking-star text-amber-400"></i> Renditja (Leaderboard)
+                    </h3>
+                    <div id="leaderboard-list" class="space-y-3">
+                        <!-- Dynamic Leaderboard -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                <h3 class="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-emerald-400"></i> Trendi Ditor i Stimulimeve (05.10 - 11.10)
+                </h3>
+                <div class="relative h-64">
+                    <canvas id="chart-daily-trend"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Rules Tab -->
+        <section id="tab-content-rules" class="tab-content hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-book-open text-blue-400"></i> Rregullat Zyrtare të Lojës së Stimulimeve
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Stimulimet llogariten automatikisht në fund të çdo ndërrimi sipas rregullave:</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 space-y-2">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">1</div>
+                        <h3 class="font-semibold text-white text-sm">Çmimi Individual</h3>
+                        <p class="text-xs text-slate-300">Nëse në fund të ndërrimit çmimi individual është:</p>
+                        <ul class="text-xs text-slate-400 space-y-1 list-disc list-inside">
+                            <li>Mbi <strong>75 €</strong> &rarr; <span class="text-emerald-400 font-semibold">5 € stimulim</span></li>
+                            <li>Mbi <strong>85 €</strong> &rarr; <span class="text-emerald-400 font-semibold">10 € stimulim</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 space-y-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">2</div>
+                        <h3 class="font-semibold text-white text-sm">AR Individual</h3>
+                        <p class="text-xs text-slate-300">Nëse në fund të ndërrimit AR individual është:</p>
+                        <ul class="text-xs text-slate-400 space-y-1 list-disc list-inside">
+                            <li>Mbi <strong>50%</strong> &rarr; <span class="text-blue-400 font-semibold">5 € stimulim</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 space-y-2">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">3</div>
+                        <h3 class="font-semibold text-white text-sm">Kartela të Shitura</h3>
+                        <p class="text-xs text-slate-300">Nëse në fund të ndërrimit janë shitur nga agjenti:</p>
+                        <ul class="text-xs text-slate-400 space-y-1 list-disc list-inside">
+                            <li>Të paktën <strong>7 kartela</strong> &rarr; <span class="text-amber-400 font-semibold">2 € stimulim</span></li>
+                            <li>Të paktën <strong>15 kartela</strong> &rarr; <span class="text-amber-400 font-semibold">5 € stimulim</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Admin PIN Auth Modal -->
+    <div id="admin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <div class="text-center">
+                <div class="w-12 h-12 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-user-shield text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white">Verifikimi i Menaxherit</h3>
+                <p class="text-xs text-slate-400 mt-1">Shkruani PIN kodin për të aktivizuar modifikimin e të dhënave (PIN-i standard: <strong>1234</strong>)</p>
+            </div>
+
+            <div>
+                <input type="password" id="admin-pin-input" placeholder="Shkruaj PIN-in..." maxlength="6"
+                    onkeyup="if(event.key==='Enter') verifyAdminPIN()"
+                    class="w-full text-center text-xl tracking-widest bg-slate-950 border border-slate-700 rounded-xl py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <p id="pin-error-msg" class="text-xs text-red-400 text-center mt-2 hidden">PIN i pasaktë! Provoni përsëri.</p>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="closeAdminModal()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition">Anulo</button>
+                <button onclick="verifyAdminPIN()" class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition">Aktivizo Admin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Management Modal (Admin Only) -->
+    <div id="agent-management-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-users-gear text-blue-400 text-lg"></i>
+                    <h3 class="text-lg font-bold text-white">Menaxhimi i Agjentëve</h3>
+                </div>
+                <button onclick="closeAgentManagementModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <!-- Add New Agent Form -->
+            <div class="flex gap-2">
+                <input type="text" id="new-agent-name-input" placeholder="Emri i agjentit të ri..." 
+                    class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                <button onclick="addNewAgent()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-plus"></i> Shto Agjent
+                </button>
+            </div>
+
+            <!-- Agent List -->
+            <div class="max-h-64 overflow-y-auto space-y-2 pr-1" id="manage-agents-list">
+                <!-- Dynamic Items -->
+            </div>
+
+            <div class="pt-3 border-t border-slate-800 flex justify-end">
+                <button onclick="closeAgentManagementModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition">Mbyll</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DATES = ["05.10", "06.10", "07.10", "08.10", "09.10", "10.10", "11.10"];
+        const DEFAULT_AGENTS = ["Agjenti 1", "Agjenti 2", "Agjenti 3", "Agjenti 4", "Agjenti 5", "Agjenti 6", "Agjenti 7", "Agjenti 8", "Agjenti 9"];
+        const STORAGE_KEY_DATA = 'stimulime_data_v2';
+        const STORAGE_KEY_AGENTS = 'stimulime_agents_v2';
+        const DEFAULT_PIN = "1234";
+
+        let agentsList = [];
+        let appData = {};
+        let isAdmin = false;
+
+        let agentTotalsChart = null;
+        let dailyTrendChart = null;
+
+        function initData() {
+            // Load agents
+            const savedAgents = localStorage.getItem(STORAGE_KEY_AGENTS);
+            if (savedAgents) {
+                try { agentsList = JSON.parse(savedAgents); } catch(e) { agentsList = [...DEFAULT_AGENTS]; }
+            } else {
+                agentsList = [...DEFAULT_AGENTS];
+            }
+
+            // Load daily data
+            const savedData = localStorage.getItem(STORAGE_KEY_DATA);
+            if (savedData) {
+                try { appData = JSON.parse(savedData); } catch(e) { appData = createEmptyData(); }
+            } else {
+                appData = createEmptyData();
+            }
+
+            ensureDataIntegrity();
+        }
+
+        function ensureDataIntegrity() {
+            DATES.forEach(date => {
+                if (!appData[date]) appData[date] = {};
+                agentsList.forEach(agent => {
+                    if (!appData[date][agent]) {
+                        appData[date][agent] = { cmimi: '', ar: '', kartela: '' };
+                    }
+                });
+            });
+        }
+
+        function createEmptyData() {
+            const data = {};
+            DATES.forEach(date => {
+                data[date] = {};
+                agentsList.forEach(agent => {
+                    data[date][agent] = { cmimi: '', ar: '', kartela: '' };
+                });
+            });
+            return data;
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY_AGENTS, JSON.stringify(agentsList));
+            localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(appData));
+            updateAllViews();
+        }
+
+        // Calculation rules
+        function calcPriceIncentive(val) {
+            const num = parseFloat(val);
+            if (isNaN(num)) return 0;
+            if (num > 85) return 10;
+            if (num > 75) return 5;
+            return 0;
+        }
+
+        function calcARIncentive(val) {
+            const num = parseFloat(val);
+            if (isNaN(num)) return 0;
+            if (num > 50) return 5;
+            return 0;
+        }
+
+        function calcCardsIncentive(val) {
+            const num = parseInt(val, 10);
+            if (isNaN(num)) return 0;
+            if (num >= 15) return 5;
+            if (num >= 7) return 2;
+            return 0;
+        }
+
+        function calcRowTotals(entry) {
+            const stimCmimi = calcPriceIncentive(entry.cmimi);
+            const stimAR = calcARIncentive(entry.ar);
+            const stimKartela = calcCardsIncentive(entry.kartela);
+            const total = stimCmimi + stimAR + stimKartela;
+            return { stimCmimi, stimAR, stimKartela, total };
+        }
+
+        function toggleAdminAuth() {
+            if (isAdmin) {
+                isAdmin = false;
+                updateRoleUI();
+                updateAllViews();
+            } else {
+                document.getElementById('admin-modal').classList.remove('hidden');
+                document.getElementById('admin-pin-input').value = '';
+                document.getElementById('pin-error-msg').classList.add('hidden');
+                document.getElementById('admin-pin-input').focus();
+            }
+        }
+
+        function closeAdminModal() {
+            document.getElementById('admin-modal').classList.add('hidden');
+        }
+
+        function verifyAdminPIN() {
+            const inputPIN = document.getElementById('admin-pin-input').value;
+            if (inputPIN === DEFAULT_PIN) {
+                isAdmin = true;
+                closeAdminModal();
+                updateRoleUI();
+                updateAllViews();
+            } else {
+                document.getElementById('pin-error-msg').classList.remove('hidden');
+            }
+        }
+
+        function updateRoleUI() {
+            const badge = document.getElementById('mode-badge');
+            const badgeText = document.getElementById('mode-badge-text');
+            const lockIcon = document.getElementById('lock-icon');
+            const lockText = document.getElementById('lock-text');
+            const adminTools = document.getElementById('admin-tools');
+            const readOnlyNotice = document.getElementById('read-only-notice');
+            const btnManageAgents = document.getElementById('btn-manage-agents');
+
+            if (isAdmin) {
+                badge.className = "px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
+                badgeText.innerHTML = '<i class="fa-solid fa-user-check"></i> Mënyra Menaxher (Edito)';
+                lockIcon.className = "fa-solid fa-lock-open";
+                lockText.innerText = "Dil nga Admin";
+                adminTools.classList.remove('hidden');
+                btnManageAgents.classList.remove('hidden');
+                readOnlyNotice.classList.add('hidden');
+            } else {
+                badge.className = "px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border bg-amber-500/10 text-amber-400 border-amber-500/30";
+                badgeText.innerHTML = '<i class="fa-solid fa-eye"></i> Mënyra Agjent (Vetëm Lexim)';
+                lockIcon.className = "fa-solid fa-lock";
+                lockText.innerText = "Hyr si Menaxher";
+                adminTools.classList.add('hidden');
+                btnManageAgents.classList.add('hidden');
+                readOnlyNotice.classList.remove('hidden');
+            }
+        }
+
+        function openAgentManagementModal() {
+            if (!isAdmin) return;
+            renderManageAgentsList();
+            document.getElementById('agent-management-modal').classList.remove('hidden');
+        }
+
+        function closeAgentManagementModal() {
+            document.getElementById('agent-management-modal').classList.add('hidden');
+        }
+
+        function renderManageAgentsList() {
+            const container = document.getElementById('manage-agents-list');
+            container.innerHTML = '';
+
+            agentsList.forEach((agent, index) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center gap-2 p-2 rounded-xl bg-slate-950 border border-slate-800";
+                item.innerHTML = `
+                    <input type="text" value="${agent}" onchange="renameAgent(${index}, this.value)"
+                        class="flex-1 bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-lg px-2.5 py-1 text-sm text-white focus:outline-none">
+                    <button onclick="deleteAgent(${index})" class="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-900 rounded-lg transition" title="Fshi Agjentin">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                    </button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function addNewAgent() {
+            if (!isAdmin) return;
+            const nameInput = document.getElementById('new-agent-name-input');
+            const newName = nameInput.value.trim();
+            if (!newName) return;
+
+            if (agentsList.includes(newName)) {
+                alert("Një agjent me këtë emër ekziston tashmë!");
+                return;
+            }
+
+            agentsList.push(newName);
+            ensureDataIntegrity();
+            nameInput.value = '';
+            renderManageAgentsList();
+            saveData();
+        }
+
+        function renameAgent(index, newName) {
+            if (!isAdmin) return;
+            const trimmed = newName.trim();
+            if (!trimmed) return;
+
+            const oldName = agentsList[index];
+            if (oldName === trimmed) return;
+
+            agentsList[index] = trimmed;
+
+            // Migrate data to new key
+            DATES.forEach(date => {
+                if (appData[date] && appData[date][oldName]) {
+                    appData[date][trimmed] = appData[date][oldName];
+                    delete appData[date][oldName];
+                }
+            });
+
+            renderManageAgentsList();
+            saveData();
+        }
+
+        function deleteAgent(index) {
+            if (!isAdmin) return;
+            const agentName = agentsList[index];
+            if (confirm(`A jeni të sigurt që dëshironi të fshini agjentin "${agentName}"?`)) {
+                agentsList.splice(index, 1);
+                DATES.forEach(date => {
+                    if (appData[date] && appData[date][agentName]) {
+                        delete appData[date][agentName];
+                    }
+                });
+                renderManageAgentsList();
+                saveData();
+            }
+        }
+
+        function renderDailyTable() {
+            const selectedDate = document.getElementById('date-selector').value;
+            const tbody = document.getElementById('daily-table-body');
+            tbody.innerHTML = '';
+
+            let sumCmimi = 0, countCmimi = 0;
+            let sumAR = 0, countAR = 0;
+            let sumKartela = 0;
+            let sumStimCmimi = 0, sumStimAR = 0, sumStimKartela = 0, sumTotalDitor = 0;
+
+            document.getElementById('agent-count-badge').innerText = agentsList.length;
+
+            agentsList.forEach((agent) => {
+                const entry = appData[selectedDate]?.[agent] || { cmimi: '', ar: '', kartela: '' };
+                const calcs = calcRowTotals(entry);
+
+                const numCmimi = parseFloat(entry.cmimi);
+                if (!isNaN(numCmimi)) { sumCmimi += numCmimi; countCmimi++; }
+
+                const numAR = parseFloat(entry.ar);
+                if (!isNaN(numAR)) { sumAR += numAR; countAR++; }
+
+                const numKartela = parseInt(entry.kartela, 10);
+                if (!isNaN(numKartela)) { sumKartela += numKartela; }
+
+                sumStimCmimi += calcs.stimCmimi;
+                sumStimAR += calcs.stimAR;
+                sumStimKartela += calcs.stimKartela;
+                sumTotalDitor += calcs.total;
+
+                const inputClass = isAdmin
+                    ? "w-full bg-slate-950 border border-slate-700 focus:border-blue-500 rounded-lg px-2.5 py-1 text-white text-sm focus:outline-none"
+                    : "w-full bg-transparent border-none text-slate-200 text-sm font-semibold pointer-events-none";
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-semibold text-slate-200">${agent}</td>
+                    <td class="py-2 px-3">
+                        ${isAdmin ? 
+                            `<input type="number" step="0.1" placeholder="0 €" value="${entry.cmimi}" onchange="updateAgentEntry('${selectedDate}', '${agent}', 'cmimi', this.value)" class="${inputClass}">` :
+                            `<span class="text-slate-300">${entry.cmimi ? entry.cmimi + ' €' : '-'}</span>`
+                        }
+                    </td>
+                    <td class="py-2 px-3">
+                        ${isAdmin ? 
+                            `<input type="number" step="0.1" placeholder="0 %" value="${entry.ar}" onchange="updateAgentEntry('${selectedDate}', '${agent}', 'ar', this.value)" class="${inputClass}">` :
+                            `<span class="text-slate-300">${entry.ar ? entry.ar + ' %' : '-'}</span>`
+                        }
+                    </td>
+                    <td class="py-2 px-3">
+                        ${isAdmin ? 
+                            `<input type="number" step="1" placeholder="0" value="${entry.kartela}" onchange="updateAgentEntry('${selectedDate}', '${agent}', 'kartela', this.value)" class="${inputClass}">` :
+                            `<span class="text-slate-300">${entry.kartela ? entry.kartela : '-'}</span>`
+                        }
+                    </td>
+                    <td class="py-3 px-3 font-semibold text-emerald-400 bg-slate-900/30">${calcs.stimCmimi > 0 ? calcs.stimCmimi + ' €' : '-'}</td>
+                    <td class="py-3 px-3 font-semibold text-blue-400 bg-slate-900/30">${calcs.stimAR > 0 ? calcs.stimAR + ' €' : '-'}</td>
+                    <td class="py-3 px-3 font-semibold text-amber-400 bg-slate-900/30">${calcs.stimKartela > 0 ? calcs.stimKartela + ' €' : '-'}</td>
+                    <td class="py-3 px-4 font-bold text-right text-white bg-blue-900/20 text-base">${calcs.total.toFixed(2)} €</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Footer Totals
+            const avgCmimi = countCmimi > 0 ? (sumCmimi / countCmimi).toFixed(1) + ' € (Mes)' : '-';
+            const avgAR = countAR > 0 ? (sumAR / countAR).toFixed(1) + ' % (Mes)' : '-';
+
+            const footer = document.getElementById('daily-table-footer');
+            footer.innerHTML = `
+                <td class="py-3.5 px-4">TOTALI DITOR</td>
+                <td class="py-3.5 px-3 text-slate-300 font-medium">${avgCmimi}</td>
+                <td class="py-3.5 px-3 text-slate-300 font-medium">${avgAR}</td>
+                <td class="py-3.5 px-3 text-slate-200">${sumKartela} kartela</td>
+                <td class="py-3.5 px-3 text-emerald-400">${sumStimCmimi} €</td>
+                <td class="py-3.5 px-3 text-blue-400">${sumStimAR} €</td>
+                <td class="py-3.5 px-3 text-amber-400">${sumStimKartela} €</td>
+                <td class="py-3.5 px-4 text-right text-emerald-400 text-lg">${sumTotalDitor.toFixed(2)} €</td>
+            `;
+        }
+
+        function updateAgentEntry(date, agent, field, value) {
+            if (!isAdmin) return;
+            if (!appData[date]) appData[date] = {};
+            if (!appData[date][agent]) appData[date][agent] = { cmimi: '', ar: '', kartela: '' };
+            appData[date][agent][field] = value;
+            saveData();
+        }
+
+        function renderSummaryTable() {
+            const tbody = document.getElementById('summary-table-body');
+            tbody.innerHTML = '';
+
+            const dateTotals = { "05.10": 0, "06.10": 0, "07.10": 0, "08.10": 0, "09.10": 0, "10.10": 0, "11.10": 0 };
+            let grandTotal = 0;
+
+            agentsList.forEach(agent => {
+                let agentWeeklyTotal = 0;
+                let cellsHtml = '';
+
+                DATES.forEach(date => {
+                    const entry = appData[date]?.[agent] || { cmimi: '', ar: '', kartela: '' };
+                    const calcs = calcRowTotals(entry);
+                    agentWeeklyTotal += calcs.total;
+                    dateTotals[date] += calcs.total;
+
+                    const cellBg = calcs.total > 0 ? 'text-white font-bold bg-slate-800/40' : 'text-slate-600';
+                    cellsHtml += `<td class="py-3 px-3 text-center ${cellBg}">${calcs.total > 0 ? calcs.total + ' €' : '0'}</td>`;
+                });
+
+                grandTotal += agentWeeklyTotal;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-semibold text-slate-200 sticky left-0 bg-slate-900">${agent}</td>
+                    ${cellsHtml}
+                    <td class="py-3 px-4 text-right font-bold text-emerald-400 bg-emerald-950/20">${agentWeeklyTotal.toFixed(2)} €</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            let footerCells = '';
+            DATES.forEach(date => {
+                footerCells += `<td class="py-3.5 px-3 text-center text-blue-400 font-bold">${dateTotals[date].toFixed(2)} €</td>`;
+            });
+
+            const footer = document.getElementById('summary-table-footer');
+            footer.innerHTML = `
+                <td class="py-3.5 px-4 sticky left-0 bg-slate-800">TOTALI DITOR (€)</td>
+                ${footerCells}
+                <td class="py-3.5 px-4 text-right text-emerald-400 text-lg bg-emerald-950/40">${grandTotal.toFixed(2)} €</td>
+            `;
+        }
+
+        function updateStatsAndCharts() {
+            let totalStimulim = 0;
+            let totalCards = 0;
+            const agentTotals = {};
+            const dailyTotals = {};
+
+            agentsList.forEach(a => agentTotals[a] = 0);
+            DATES.forEach(d => dailyTotals[d] = 0);
+
+            DATES.forEach(date => {
+                agentsList.forEach(agent => {
+                    const entry = appData[date]?.[agent] || { cmimi: '', ar: '', kartela: '' };
+                    const calcs = calcRowTotals(entry);
+
+                    agentTotals[agent] += calcs.total;
+                    dailyTotals[date] += calcs.total;
+                    totalStimulim += calcs.total;
+
+                    const numK = parseInt(entry.kartela, 10);
+                    if (!isNaN(numK)) totalCards += numK;
+                });
+            });
+
+            let topAgent = '-';
+            let maxVal = -1;
+            Object.entries(agentTotals).forEach(([agent, val]) => {
+                if (val > maxVal) {
+                    maxVal = val;
+                    topAgent = agent;
+                }
+            });
+
+            document.getElementById('stat-total-stimulim').innerText = totalStimulim.toFixed(2) + ' €';
+            document.getElementById('stat-total-cards').innerText = totalCards;
+            document.getElementById('stat-avg-daily').innerText = (totalStimulim / DATES.length).toFixed(2) + ' €';
+            
+            if (maxVal > 0) {
+                document.getElementById('stat-top-agent').innerText = topAgent;
+                document.getElementById('stat-top-agent-amount').innerText = maxVal.toFixed(2) + ' € stimulim i fituar';
+            } else {
+                document.getElementById('stat-top-agent').innerText = '-';
+                document.getElementById('stat-top-agent-amount').innerText = '0.00 € stimulim';
+            }
+
+            // Leaderboard
+            const sortedAgents = Object.entries(agentTotals).sort((a, b) => b[1] - a[1]);
+            const leaderboardContainer = document.getElementById('leaderboard-list');
+            leaderboardContainer.innerHTML = '';
+
+            sortedAgents.forEach(([agent, total], idx) => {
+                let badgeClass = 'bg-slate-800 text-slate-400';
+                if (idx === 0) badgeClass = 'bg-amber-500 text-slate-950 font-bold';
+                else if (idx === 1) badgeClass = 'bg-slate-300 text-slate-950 font-bold';
+                else if (idx === 2) badgeClass = 'bg-amber-700 text-white font-bold';
+
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2.5 rounded-xl bg-slate-800/40 border border-slate-800";
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="w-6 h-6 rounded-lg text-xs flex items-center justify-center ${badgeClass}">${idx + 1}</span>
+                        <span class="text-sm font-medium text-slate-200">${agent}</span>
+                    </div>
+                    <span class="text-sm font-bold text-emerald-400">${total.toFixed(2)} €</span>
+                `;
+                leaderboardContainer.appendChild(item);
+            });
+
+            // Chart 1
+            const ctx1 = document.getElementById('chart-agent-totals').getContext('2d');
+            if (agentTotalsChart) agentTotalsChart.destroy();
+
+            agentTotalsChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: agentsList,
+                    datasets: [{
+                        label: 'Totali i Stimulimit (€)',
+                        data: agentsList.map(a => agentTotals[a]),
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1.5,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    }
+                }
+            });
+
+            // Chart 2
+            const ctx2 = document.getElementById('chart-daily-trend').getContext('2d');
+            if (dailyTrendChart) dailyTrendChart.destroy();
+
+            dailyTrendChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: DATES.map(d => 'Datë ' + d),
+                    datasets: [{
+                        label: 'Stimulimi Ditor (€)',
+                        data: DATES.map(d => dailyTotals[d]),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#10b981',
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function updateAllViews() {
+            renderDailyTable();
+            renderSummaryTable();
+            updateStatsAndCharts();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'text-blue-400');
+                btn.classList.add('border-transparent', 'text-slate-400');
+            });
+
+            document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            activeBtn.classList.remove('border-transparent', 'text-slate-400');
+            activeBtn.classList.add('border-blue-500', 'text-blue-400');
+
+            if (tabId === 'analytics') {
+                setTimeout(updateStatsAndCharts, 50);
+            }
+        }
+
+        function loadDemoData() {
+            if (!isAdmin) return;
+            DATES.forEach(date => {
+                agentsList.forEach(agent => {
+                    appData[date][agent] = {
+                        cmimi: (Math.random() * 35 + 60).toFixed(1),
+                        ar: (Math.random() * 30 + 35).toFixed(1),
+                        kartela: Math.floor(Math.random() * 18)
+                    };
+                });
+            });
+            saveData();
+        }
+
+        function resetData() {
+            if (!isAdmin) return;
+            if (confirm("A jeni të sigurt që dëshironi të fshini të gjitha të dhënat dhe të ktheni agjentët standardë?")) {
+                agentsList = [...DEFAULT_AGENTS];
+                appData = createEmptyData();
+                saveData();
+            }
+        }
+
+        function exportToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,Data,Agjenti,Cmimi Individual (€),AR Individual (%),Kartela te Shitura,Stimulim Cmimi (€),Stimulim AR (€),Stimulim Kartela (€),Totali Ditor (€)\n";
+
+            DATES.forEach(date => {
+                agentsList.forEach(agent => {
+                    const entry = appData[date]?.[agent] || { cmimi: '', ar: '', kartela: '' };
+                    const calcs = calcRowTotals(entry);
+                    csvContent += `${date},${agent},${entry.cmimi || 0},${entry.ar || 0},${entry.kartela || 0},${calcs.stimCmimi},${calcs.stimAR},${calcs.stimKartela},${calcs.total}\n`;
+                });
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Stimulimet_05_11_Tetor.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.onload = function() {
+            initData();
+            updateRoleUI();
+            updateAllViews();
+        };
+    </script>
+</body>
+</html>
